@@ -7,7 +7,7 @@ wheels/
 *.egg-info
 
 # Configuration files
-config.yaml
+*.yaml
 
 # Virtual environments
 .venv
