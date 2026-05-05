@@ -1,0 +1,506 @@
+{
+  "videos": [
+    {
+      "video": "MVI_20011",
+      "frames": 664,
+      "detections": 17431
+    },
+    {
+      "video": "MVI_20012",
+      "frames": 936,
+      "detections": 24743
+    },
+    {
+      "video": "MVI_20032",
+      "frames": 437,
+      "detections": 11500
+    },
+    {
+      "video": "MVI_20033",
+      "frames": 784,
+      "detections": 21968
+    },
+    {
+      "video": "MVI_20034",
+      "frames": 800,
+      "detections": 25709
+    },
+    {
+      "video": "MVI_20035",
+      "frames": 800,
+      "detections": 23784
+    },
+    {
+      "video": "MVI_20051",
+      "frames": 906,
+      "detections": 23592
+    },
+    {
+      "video": "MVI_20052",
+      "frames": 694,
+      "detections": 17249
+    },
+    {
+      "video": "MVI_20061",
+      "frames": 800,
+      "detections": 20480
+    },
+    {
+      "video": "MVI_20062",
+      "frames": 800,
+      "detections": 16969
+    },
+    {
+      "video": "MVI_20063",
+      "frames": 800,
+      "detections": 17261
+    },
+    {
+      "video": "MVI_20064",
+      "frames": 800,
+      "detections": 19643
+    },
+    {
+      "video": "MVI_20065",
+      "frames": 1200,
+      "detections": 32467
+    },
+    {
+      "video": "MVI_39031",
+      "frames": 1470,
+      "detections": 14054
+    },
+    {
+      "video": "MVI_39051",
+      "frames": 1120,
+      "detections": 3722
+    },
+    {
+      "video": "MVI_39211",
+      "frames": 1660,
+      "detections": 26310
+    },
+    {
+      "video": "MVI_39271",
+      "frames": 1570,
+      "detections": 19003
+    },
+    {
+      "video": "MVI_39311",
+      "frames": 1505,
+      "detections": 42066
+    },
+    {
+      "video": "MVI_39361",
+      "frames": 2030,
+      "detections": 40978
+    },
+    {
+      "video": "MVI_39371",
+      "frames": 1390,
+      "detections": 10595
+    },
+    {
+      "video": "MVI_39401",
+      "frames": 1385,
+      "detections": 30866
+    },
+    {
+      "video": "MVI_39501",
+      "frames": 540,
+      "detections": 11255
+    },
+    {
+      "video": "MVI_39511",
+      "frames": 380,
+      "detections": 5809
+    },
+    {
+      "video": "MVI_39761",
+      "frames": 1660,
+      "detections": 24960
+    },
+    {
+      "video": "MVI_39771",
+      "frames": 570,
+      "detections": 9106
+    },
+    {
+      "video": "MVI_39781",
+      "frames": 1865,
+      "detections": 26315
+    },
+    {
+      "video": "MVI_39801",
+      "frames": 885,
+      "detections": 13461
+    },
+    {
+      "video": "MVI_39811",
+      "frames": 1070,
+      "detections": 10532
+    },
+    {
+      "video": "MVI_39821",
+      "frames": 880,
+      "detections": 14235
+    },
+    {
+      "video": "MVI_39851",
+      "frames": 1420,
+      "detections": 14740
+    },
+    {
+      "video": "MVI_39861",
+      "frames": 745,
+      "detections": 6946
+    },
+    {
+      "video": "MVI_39931",
+      "frames": 1270,
+      "detections": 9590
+    },
+    {
+      "video": "MVI_40131",
+      "frames": 1645,
+      "detections": 39808
+    },
+    {
+      "video": "MVI_40141",
+      "frames": 1600,
+      "detections": 34804
+    },
+    {
+      "video": "MVI_40152",
+      "frames": 1750,
+      "detections": 26428
+    },
+    {
+      "video": "MVI_40161",
+      "frames": 1490,
+      "detections": 30223
+    },
+    {
+      "video": "MVI_40162",
+      "frames": 1765,
+      "detections": 39611
+    },
+    {
+      "video": "MVI_40171",
+      "frames": 1150,
+      "detections": 9859
+    },
+    {
+      "video": "MVI_40172",
+      "frames": 2635,
+      "detections": 30655
+    },
+    {
+      "video": "MVI_40181",
+      "frames": 1700,
+      "detections": 8519
+    },
+    {
+      "video": "MVI_40191",
+      "frames": 2495,
+      "detections": 55747
+    },
+    {
+      "video": "MVI_40192",
+      "frames": 2195,
+      "detections": 48315
+    },
+    {
+      "video": "MVI_40201",
+      "frames": 925,
+      "detections": 16901
+    },
+    {
+      "video": "MVI_40204",
+      "frames": 1225,
+      "detections": 23492
+    },
+    {
+      "video": "MVI_40211",
+      "frames": 1950,
+      "detections": 7795
+    },
+    {
+      "video": "MVI_40212",
+      "frames": 1690,
+      "detections": 8657
+    },
+    {
+      "video": "MVI_40213",
+      "frames": 1790,
+      "detections": 8499
+    },
+    {
+      "video": "MVI_40241",
+      "frames": 2320,
+      "detections": 44993
+    },
+    {
+      "video": "MVI_40243",
+      "frames": 1265,
+      "detections": 27890
+    },
+    {
+      "video": "MVI_40244",
+      "frames": 1345,
+      "detections": 24996
+    },
+    {
+      "video": "MVI_40701",
+      "frames": 1130,
+      "detections": 32956
+    },
+    {
+      "video": "MVI_40711",
+      "frames": 1030,
+      "detections": 22264
+    },
+    {
+      "video": "MVI_40712",
+      "frames": 2400,
+      "detections": 43843
+    },
+    {
+      "video": "MVI_40714",
+      "frames": 1180,
+      "detections": 34521
+    },
+    {
+      "video": "MVI_40732",
+      "frames": 2120,
+      "detections": 13325
+    },
+    {
+      "video": "MVI_40742",
+      "frames": 1655,
+      "detections": 34152
+    },
+    {
+      "video": "MVI_40743",
+      "frames": 1630,
+      "detections": 27014
+    },
+    {
+      "video": "MVI_40751",
+      "frames": 1145,
+      "detections": 9102
+    },
+    {
+      "video": "MVI_40752",
+      "frames": 2025,
+      "detections": 37131
+    },
+    {
+      "video": "MVI_40761",
+      "frames": 2030,
+      "detections": 21401
+    },
+    {
+      "video": "MVI_40762",
+      "frames": 1825,
+      "detections": 19489
+    },
+    {
+      "video": "MVI_40763",
+      "frames": 1745,
+      "detections": 15101
+    },
+    {
+      "video": "MVI_40771",
+      "frames": 1720,
+      "detections": 24033
+    },
+    {
+      "video": "MVI_40772",
+      "frames": 1200,
+      "detections": 19970
+    },
+    {
+      "video": "MVI_40773",
+      "frames": 985,
+      "detections": 10434
+    },
+    {
+      "video": "MVI_40774",
+      "frames": 950,
+      "detections": 12231
+    },
+    {
+      "video": "MVI_40775",
+      "frames": 975,
+      "detections": 17248
+    },
+    {
+      "video": "MVI_40792",
+      "frames": 1810,
+      "detections": 21131
+    },
+    {
+      "video": "MVI_40793",
+      "frames": 1960,
+      "detections": 29331
+    },
+    {
+      "video": "MVI_40851",
+      "frames": 1140,
+      "detections": 28561
+    },
+    {
+      "video": "MVI_40852",
+      "frames": 1150,
+      "detections": 28783
+    },
+    {
+      "video": "MVI_40853",
+      "frames": 1590,
+      "detections": 48040
+    },
+    {
+      "video": "MVI_40854",
+      "frames": 1195,
+      "detections": 30589
+    },
+    {
+      "video": "MVI_40855",
+      "frames": 1090,
+      "detections": 24966
+    },
+    {
+      "video": "MVI_40863",
+      "frames": 1670,
+      "detections": 41815
+    },
+    {
+      "video": "MVI_40864",
+      "frames": 1515,
+      "detections": 38057
+    },
+    {
+      "video": "MVI_40871",
+      "frames": 1720,
+      "detections": 36113
+    },
+    {
+      "video": "MVI_40891",
+      "frames": 1545,
+      "detections": 35589
+    },
+    {
+      "video": "MVI_40892",
+      "frames": 1790,
+      "detections": 37395
+    },
+    {
+      "video": "MVI_40901",
+      "frames": 1335,
+      "detections": 21680
+    },
+    {
+      "video": "MVI_40902",
+      "frames": 1005,
+      "detections": 21340
+    },
+    {
+      "video": "MVI_40903",
+      "frames": 1060,
+      "detections": 26143
+    },
+    {
+      "video": "MVI_40904",
+      "frames": 1270,
+      "detections": 38096
+    },
+    {
+      "video": "MVI_40905",
+      "frames": 1710,
+      "detections": 43333
+    },
+    {
+      "video": "MVI_40962",
+      "frames": 1875,
+      "detections": 10774
+    },
+    {
+      "video": "MVI_40963",
+      "frames": 1820,
+      "detections": 12444
+    },
+    {
+      "video": "MVI_40981",
+      "frames": 1995,
+      "detections": 12810
+    },
+    {
+      "video": "MVI_40991",
+      "frames": 1820,
+      "detections": 10107
+    },
+    {
+      "video": "MVI_40992",
+      "frames": 2160,
+      "detections": 12533
+    },
+    {
+      "video": "MVI_41063",
+      "frames": 1505,
+      "detections": 12518
+    },
+    {
+      "video": "MVI_41073",
+      "frames": 1825,
+      "detections": 12569
+    },
+    {
+      "video": "MVI_63521",
+      "frames": 2055,
+      "detections": 18190
+    },
+    {
+      "video": "MVI_63525",
+      "frames": 985,
+      "detections": 4320
+    },
+    {
+      "video": "MVI_63544",
+      "frames": 1160,
+      "detections": 14535
+    },
+    {
+      "video": "MVI_63552",
+      "frames": 1150,
+      "detections": 9780
+    },
+    {
+      "video": "MVI_63553",
+      "frames": 1405,
+      "detections": 11943
+    },
+    {
+      "video": "MVI_63554",
+      "frames": 1445,
+      "detections": 11570
+    },
+    {
+      "video": "MVI_63561",
+      "frames": 1285,
+      "detections": 13619
+    },
+    {
+      "video": "MVI_63562",
+      "frames": 1185,
+      "detections": 9266
+    },
+    {
+      "video": "MVI_63563",
+      "frames": 1390,
+      "detections": 11303
+    }
+  ],
+  "labels_dir": "/home/whall/FrameDiff/data/gt_dataset/labels",
+  "manifests_dir": "/home/whall/FrameDiff/data/gt_dataset/manifests"
+}

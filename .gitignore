@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Configuration files
+config.yaml
+
+# Virtual environments
+.venv
+checkpoints/*
+
+*.pt
+data/frames/
+data/gt_dataset/labels
+data/gt_dataset/manifests
