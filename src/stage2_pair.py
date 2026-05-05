@@ -44,23 +44,42 @@ FRAME_RE = re.compile(r"^(?P<video>.+)_img(?P<num>\d+)\.(?P<ext>[^.]+)$")
 IMAGE_EXTS = {"txt"}
 
 def compute_iou(box_a, box_b):
-    try:
-        assert len(box_a) >= 4 and len(box_b) >= 4
-    except AssertionError:
+    """IoU between two boxes in YOLO normalized center format [x_c, y_c, w, h].
+
+    Coordinates are floats in [0, 1]; we convert to corner form (x1, y1, x2, y2)
+    before intersecting. No pixel-style `+ 1` term, since the boxes are
+    continuous, not integer pixel grids.
+    """
+    if len(box_a) < 4 or len(box_b) < 4:
         print(f"Error: Box A {box_a} or Box B {box_b} does not have 4 coordinates.")
         return 0.0
-    xA = max(box_a[0], box_b[0])
-    yA = max(box_a[1], box_b[1])
-    xB = min(box_a[2], box_b[2])
-    yB = min(box_a[3], box_b[3])
+
+    ax1 = box_a[0] - box_a[2] / 2.0
+    ay1 = box_a[1] - box_a[3] / 2.0
+    ax2 = box_a[0] + box_a[2] / 2.0
+    ay2 = box_a[1] + box_a[3] / 2.0
+
+    bx1 = box_b[0] - box_b[2] / 2.0
+    by1 = box_b[1] - box_b[3] / 2.0
+    bx2 = box_b[0] + box_b[2] / 2.0
+    by2 = box_b[1] + box_b[3] / 2.0
+
+    xA = max(ax1, bx1)
+    yA = max(ay1, by1)
+    xB = min(ax2, bx2)
+    yB = min(ay2, by2)
+
+    inter_w = max(0.0, xB - xA)
+    inter_h = max(0.0, yB - yA)
+    inter_area = inter_w * inter_h
+
+    area_a = (ax2 - ax1) * (ay2 - ay1)
+    area_b = (bx2 - bx1) * (by2 - by1)
+    union = area_a + area_b - inter_area
+    if union <= 0:
+        return 0.0
+    return inter_area / union
     
-    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
-    
-    boxAArea = (box_a[2] - box_a[0] + 1) * (box_a[3] - box_a[1] + 1)
-    boxBArea = (box_b[2] - box_b[0] + 1) * (box_b[3] - box_b[1] + 1)
-    
-    iou = interArea / float(boxAArea + boxBArea - interArea)
-    return iou
 
 def match_detections(detections_a, detections_b, iou_threshold=0.5):
     if len(detections_a) == 0 or len(detections_b) == 0:
