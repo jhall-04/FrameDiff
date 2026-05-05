@@ -79,24 +79,28 @@ def compute_iou(box_a, box_b):
     if union <= 0:
         return 0.0
     return inter_area / union
-    
 
-def match_detections(detections_a, detections_b, iou_threshold=0.5):
+
+def match_detections(detections_a, detections_b, iou_threshold=0.5, min_iou=1e-6):
     if len(detections_a) == 0 or len(detections_b) == 0:
         return 0, 0, 0.0, 0.0  # No matches if either list is empty
-    
+
     iou_matrix = np.zeros((len(detections_a), len(detections_b)))
-    
     for i, det_a in enumerate(detections_a):
         for j, det_b in enumerate(detections_b):
             iou_matrix[i, j] = compute_iou(det_a[1:], det_b[1:])
-    
-    row_ind, col_ind = linear_sum_assignment(-iou_matrix)  # Maximize IoU
-    n_matched = len(row_ind)
-    n_matched_well = sum(iou_matrix[row_ind[k], col_ind[k]] >= iou_threshold for k in range(n_matched))
-    mean_iou = np.mean([iou_matrix[row_ind[k], col_ind[k]] for k in range(n_matched)]) if n_matched > 0 else 0.0
+
+    # linear_sum_assignment on -iou_matrix maximizes the sum of IoUs over the optimal one-to-one assignment
+    row_ind, col_ind = linear_sum_assignment(-iou_matrix)
+    matched_ious = iou_matrix[row_ind, col_ind]
+    real = matched_ious > min_iou
+    matched_ious = matched_ious[real]
+
+    n_matched = int(real.sum())
+    n_matched_well = int((matched_ious >= iou_threshold).sum())
+    mean_iou = float(matched_ious.mean()) if n_matched > 0 else 0.0
     match_quality = n_matched_well / n_matched if n_matched > 0 else 0.0
-    
+
     return n_matched, n_matched_well, mean_iou, match_quality
 
 def group_detections_by_video(detections_dir: Path):
@@ -121,22 +125,50 @@ def group_detections_by_video(detections_dir: Path):
     return groups
 
 def parse_detections(detection_path: Path):
-    """Parse a YOLO .txt file and return a list of detections with absolute box coordinates."""
+    """Parse a YOLO .txt file and return a 2D ndarray of detections. 
+    Always returns a 2D array (shape (n, 6))"""
+
     detections = np.loadtxt(detection_path, dtype=np.float32)
-    # Check if the file is empty (no detections)
     if detections.size == 0:
-        return None
-    return detections if detections.ndim == 2 else [detections]  # Handle single detection case
+        return np.empty((0, 6), dtype=np.float32)
+    if detections.ndim == 1:
+        detections = detections.reshape(1, -1)
+    return detections
 
 def build_pairs(detections_by_video, future_offsets, checkpoint_interval=10000):
     columns = ["video_name", "frame_num_a", "frame_num_b", "offset", "num_detections_a", "num_detections_b", "n_matched", "n_matched_well", "mean_iou", "match_quality"]
     detection_df = pd.DataFrame(columns=columns)
+
+    # resume from the most recent checkpoint, if one exists
     rows = []
-    detection_count = 0
+    done = set()
+    if PARQUET_CHECKPOINT_DIR.exists():
+        ckpts = sorted(
+            PARQUET_CHECKPOINT_DIR.glob("detection_pairs_checkpoint_*.parquet"),
+            key=lambda p: int(p.stem.rsplit("_", 1)[-1]),
+        )
+        if ckpts:
+            latest = ckpts[-1]
+            prior = pd.read_parquet(latest)
+            rows = prior.to_dict(orient="records")
+            done = set(zip(
+                prior["video_name"].tolist(),
+                [int(x) for x in prior["frame_num_a"].tolist()],
+                [int(x) for x in prior["offset"].tolist()],
+            ))
+            print(f"Resuming from {latest.name} ({len(rows)} prior pairs)")
+
+    pair_count = len(rows)
     for video, detections in detections_by_video.items():
         for i, (frame_num_a, path_a) in enumerate(detections):
+            # If every offset for this anchor is already in the checkpoint,
+            # skip without paying the parse cost.
+            if done and all((video, frame_num_a, off) in done for off in future_offsets):
+                continue
             detections_a = parse_detections(path_a)
             for offset in future_offsets:
+                if (video, frame_num_a, offset) in done:
+                    continue
                 frame_num_b = frame_num_a + offset
                 path_b = detections[i + offset][1] if i + offset < len(detections) else None
                 if path_b is None:
@@ -155,10 +187,10 @@ def build_pairs(detections_by_video, future_offsets, checkpoint_interval=10000):
                     "mean_iou": mean_iou,
                     "match_quality": match_quality
                 })
-                detection_count += 1
-                if detection_count % checkpoint_interval == 0:
-                    print(f"Creating Checkpoint at {detection_count} detections...")
-                    checkpoint_path = PARQUET_CHECKPOINT_DIR / f"detection_pairs_checkpoint_{detection_count}.parquet"
+                pair_count += 1
+                if pair_count % checkpoint_interval == 0:
+                    print(f"Creating checkpoint at {pair_count} pairs...")
+                    checkpoint_path = PARQUET_CHECKPOINT_DIR / f"detection_pairs_checkpoint_{pair_count}.parquet"
                     pd.DataFrame(rows, columns=columns).to_parquet(checkpoint_path, compression='snappy')
         print(f"Processed video {video}, total pairs so far: {len(rows)}")
     detection_df = pd.concat([detection_df, pd.DataFrame(rows, columns=columns)], ignore_index=True)
@@ -170,12 +202,11 @@ def main():
                     help="Directory containing {video}_img{N}.txt files")
     ap.add_argument("--out-dir", type=Path, default=PAIRS_DIR,
                     help="Output root;")
-    ap.add_argument("--conf", type=float, default=0.3,
-                    help="Confidence threshold (default 0.3)")
     args = ap.parse_args()
 
     if not os.path.exists(args.out_dir):
         args.out_dir.mkdir(parents=True, exist_ok=True)
+    PARQUET_CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
     detections_by_video = group_detections_by_video(args.detections_dir)
     print(f"Found {len(detections_by_video)} videos, {sum(len(v) for v in detections_by_video.values())} detections total")
