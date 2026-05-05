@@ -8,5 +8,6 @@ dependencies = [
     "jupyter>=1.1.1",
     "pandas>=3.0.2",
     "pyarrow>=24.0.0",
+    "scikit-learn>=1.8.0",
     "ultralytics>=8.4.46",
 ]

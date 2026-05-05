@@ -17,3 +17,74 @@ The manifest will have the following columns:
 This stage will enable us to provide labels for training a model to predict when bounding boxes need to be recomputed based on the changes in object detections between pairs of frames.
 """
 
+import numpy as np
+from sklearn.model_selection import train_test_split
+from pathlib import Path
+import pandas as pd
+import yaml
+
+with open('configs/stage_3_config.yaml', 'r') as f:
+    config = yaml.safe_load(f)
+
+THRESHOLDS = config['data']['thresholds']
+PARQUET_FILE = config['data']['parquet_file']
+LABELS_OUTPUT_DIR = Path(config['data']['labels_output_dir'])
+LABELS_OUTPUT_DIR.mkdir(exist_ok=True)
+
+def split_dataset(df):
+    videos = df[['video_name']].drop_duplicates()
+    videos['video_group'] = videos['video_name'].str.extract(r'MVI_(\d{2})')[0]
+
+    group_counts = videos['video_group'].value_counts()
+    singles_mask = videos['video_group'].isin(group_counts[group_counts < 2].index)
+
+    singles = videos[singles_mask]
+    multiples = videos[~singles_mask]
+
+    # 60% train / 20% val / 20% test, stratified by video_group
+    train_v, hold_v = train_test_split(
+        multiples, test_size=0.40, stratify=multiples['video_group'], random_state=42
+    )
+
+    hold_group_counts = hold_v['video_group'].value_counts()
+    hold_rare_mask = hold_v['video_group'].isin(hold_group_counts[hold_group_counts < 2].index)
+    hold_rare = hold_v[hold_rare_mask]
+    hold_common = hold_v[~hold_rare_mask]
+
+    val_v, test_v = train_test_split(
+        hold_common, test_size=0.50, stratify=hold_common['video_group'], random_state=42
+    )
+
+    train_v = pd.concat([train_v, singles, hold_rare])
+
+    video_to_split = {**{v: 'train' for v in train_v['video_name']},
+                    **{v: 'val'   for v in val_v['video_name']},
+                    **{v: 'test'  for v in test_v['video_name']}}
+    df['split'] = df['video_name'].map(video_to_split)
+    return df
+
+def label_data(df, threshold):
+    """Label each pair as 0 (recompute) or 1 (keep) based on heuristics."""
+    def label_row(row):
+        if row['mean_iou'] < threshold:
+            return 0  # recompute
+        else:
+            return 1  # keep
+    df['label'] = df.apply(label_row, axis=1)
+    return df
+
+def main():
+    df = pd.read_parquet(PARQUET_FILE)
+    df = split_dataset(df)
+    for t in THRESHOLDS:
+        labeled_df = label_data(df.copy(), t)
+        # Check class balance
+        balance = labeled_df['label'].value_counts(normalize=True)
+        print(f"Threshold {t}: Class balance:\n{balance}\n")
+        output_file = LABELS_OUTPUT_DIR / f"detection_pairs_labeled_{int(t*100)}.parquet"
+        labeled_df.to_parquet(output_file)
+        print(f"Saved labeled dataset with threshold {t} to {output_file.name}")
+
+
+if __name__ == "__main__":
+    main()

@@ -18,15 +18,13 @@ This stage will enable us to analyze how object detections change over
 import os
 from scipy.optimize import linear_sum_assignment
 import pandas as pd
-import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
 import argparse
 import re
 from collections import defaultdict
-import random
 import yaml
-import cv2
+
 
 with open('configs/stage_2_config.yaml', 'r') as f:
     config = yaml.safe_load(f)
