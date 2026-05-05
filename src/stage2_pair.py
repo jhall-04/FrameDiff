@@ -1,7 +1,7 @@
 """
 Stage 2: Pairing frames based on variable offsets
 Input: A directory of .txt files containing YOLO detections for each frame, and a directory of the corresponding frames.
-Output: A parquet manifest containing pairs of frames and their detections, where the second frame in each pair is offset from the first by a variable number of frames (e.g., 1, 3, 5, 7, 11, 13).
+Output: A parquet manifest containing pairs of frames and their computed metrics, where the second frame in each pair is offset from the first by a variable number of frames (e.g., 1, 3, 5, 7, 11, 13).
 The manifest will have the following columns:
 - video_name: The name of the video (derived from the frame filenames).
 - frame_num_a: The frame number of the first frame in the pair.
@@ -13,7 +13,6 @@ The manifest will have the following columns:
 - n_matched_well: The number of matched detections that have an IoU above a certain threshold (e.g., 0.5), indicating a strong match.
 - mean_iou: The average IoU of the matched detections between the two frames.
 - match_quality: n_matched_well / n_matched, representing the quality of the matches between the two frames.
-- label
 This stage will enable us to analyze how object detections change over
 """
 import os
