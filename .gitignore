@@ -18,3 +18,4 @@ checkpoints/*
 data/frames/
 data/gt_dataset/labels
 data/gt_dataset/manifests
+*.parquet
