@@ -62,7 +62,7 @@ class PairDataset(Dataset):
                  split: str,
                  *,
                  downsample: bool = True,
-                 target_size: int | tuple[int, int] = 256,
+                 target_size: int | tuple[int, int] = 128,
                  flow_norm_scale: float = 30.0,
                  gaussian_ksize: int = 5,
                  gaussian_sigma: float = 1.0) -> None:
@@ -88,12 +88,11 @@ class PairDataset(Dataset):
         return len(self.df)
 
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         row = self.df.iloc[idx]
         video = str(row["video_name"])
         fa = int(row["frame_num_a"])
         fb = int(row["frame_num_b"])
-        k = int(row["offset"])
         label = float(row["label"])
 
         pa = frame_path(self.frames_folder, video, fa)
@@ -124,9 +123,8 @@ class PairDataset(Dataset):
 
         x = np.stack([mag_norm, diff_norm], axis=0)
         x_t = torch.from_numpy(np.ascontiguousarray(x)).float()
-        k_t = torch.tensor(k, dtype=torch.long)
         y_t = torch.tensor(label, dtype=torch.float32)
-        return x_t, k_t, y_t
+        return x_t, y_t
 
 
 def make_dataloaders(config_path: str | Path = "configs/stage4_config.yaml",
@@ -147,7 +145,7 @@ def make_dataloaders(config_path: str | Path = "configs/stage4_config.yaml",
 
     common = dict(
         downsample=data.get("downsample", True),
-        target_size=data.get("target_hw", 256),
+        target_size=data.get("target_hw", 128),
         flow_norm_scale=data.get("flow_norm_scale", 30.0),
         gaussian_ksize=data.get("gaussian_ksize", 5),
         gaussian_sigma=data.get("gaussian_sigma", 1.0),
