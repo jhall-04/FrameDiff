@@ -68,7 +68,7 @@ def split_dataset(df):
             stratify=multiples["video_group"],
             random_state=42,
         )
-
+        # Ensure each set has at least two videos for stratification; if not, assign to test
         hold_group_counts = hold_v["video_group"].value_counts()
         hold_rare_mask = hold_v["video_group"].isin(
             hold_group_counts[hold_group_counts < 2].index
@@ -99,6 +99,7 @@ def split_dataset(df):
         **{v: "val" for v in val_v["video_name"]},
         **{v: "test" for v in test_v["video_name"]},
     }
+    # Map each row to a split in the original dataframe to its split based on video_name
     df["split"] = df["video_name"].map(video_to_split)
     return df
 
@@ -125,9 +126,12 @@ def label_data(df, threshold):
     return df
 
 def main():
+    # Load pairs
     df = pd.read_parquet(PARQUET_FILE)
+    # Drop pairs where either frame has no detections, as these are trivial cases that don't provide useful training signal for the model. This also helps to balance the dataset and focus on more challenging examples.
     df = drop_empty_detection_pairs(df)
     df = split_dataset(df)
+    # For each threshold label the data and check class balance.
     for t in THRESHOLDS:
         labeled_df = label_data(df.copy(), t)
         # Check class balance

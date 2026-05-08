@@ -5,7 +5,10 @@ import time
 import glob
 import os
 from scipy.optimize import linear_sum_assignment
+from stage1_boxes import group_frames_by_video
 from ultralytics import YOLO
+from pathlib import Path
+import pandas as pd
 import numpy as np
 import shutil
 import sys
@@ -24,6 +27,7 @@ SKIP_K_FRAMES        = demo_config["output"]["skip_k_frames"]
 LEARNED_SKIP_FRAMES  = demo_config["output"]["learned_skip_frames"]
 FULL_COMPUTE_FRAMES  = demo_config["output"]["full_compute_frames"]
 VIDEO_OUTPUT         = demo_config["output"]["video_output"]
+PARQUET_FILE         = demo_config["data"]["parquet_file"]
 
 VEHICLE_CLASSES = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
 
@@ -202,20 +206,6 @@ def _run_yolo(frame_bgr: np.ndarray) -> tuple[np.ndarray, float]:
     mask  = np.isin(results.boxes.cls.cpu().numpy(), list(VEHICLE_CLASSES.keys()))
     return boxes[mask], elapsed_ms
 
-# Annotate + save a frame
-def _annotate_and_save(
-    frame_bgr: np.ndarray,
-    boxes: np.ndarray,
-    is_fresh: bool,
-    label_lines: list[str],
-    save_path: str,
-) -> None:
-    out = frame_bgr.copy()
-    draw_boxes(out, boxes, is_fresh=is_fresh)
-    add_freshness_dot(out, is_fresh=is_fresh)
-    out = add_bottom_strip(out, label_lines)
-    cv2.imwrite(save_path, out)
-
 # Strategy 1 — always full YOLO ("baseline")
 global gt_boxes
 gt_boxes = None  # For demo annotation
@@ -227,20 +217,11 @@ def run_full_yolo(
 ) -> tuple[np.ndarray, float]:
     boxes, t_ms = _run_yolo(frame_bgr)
     latency.update(t_ms)
-    _annotate_and_save(
-        frame_bgr, boxes, is_fresh=True,
-        label_lines=[
-            "Always YOLO",
-            f"Avg latency: {latency.mean:.2f} ms",
-            f"This frame: {t_ms:.2f} ms",
-        ],
-        save_path=os.path.join(save_dir, f"full_{frame_idx:05d}.jpg"),
-    )
     global gt_boxes
     gt_boxes = boxes
     return boxes, latency.mean
 
-# Strategy 2 — skip-K (fixed periodic skip)
+# Strategy 2 — skip every K frames
 class SkipKState:
     """Mutable state for the skip-K strategy."""
     __slots__ = ("last_frame_bgr", "last_boxes")
@@ -266,15 +247,6 @@ def run_skip_k(
         state.last_frame_bgr = frame_bgr
         state.last_boxes = boxes
         IoU.update(1) # Keyframes are "perfect" matches to themselves, so IoU=1.
-        _annotate_and_save(
-            frame_bgr, boxes, is_fresh=True,
-            label_lines=[
-                "Skip-K",
-                f"Avg latency: {latency.mean:.2f} ms",
-                f"This frame: {t_ms:.2f} ms",
-            ],
-            save_path=os.path.join(SKIP_K_FRAMES, f"skipk_{frame_idx:05d}.jpg"),
-        )
         return boxes, latency.mean
 
     # skipped frame
@@ -284,15 +256,6 @@ def run_skip_k(
     IoU.update(cur_iou)  # Update IoU for skipped frames.
     avg_iou = IoU.mean
     avg = latency.mean
-    _annotate_and_save(
-        frame_bgr, state.last_boxes, is_fresh=False,
-        label_lines=[
-            "Skip-K",
-            f"Avg latency: {avg:.2f} ms, Avg IoU: {avg_iou:.3f}",
-            f"This frame: 0 ms, IoU: {cur_iou:.3f} (skipped)",
-        ],
-        save_path=os.path.join(SKIP_K_FRAMES, f"skipk_{frame_idx:05d}.jpg"),
-    )
     return state.last_boxes, avg
 
 # Strategy 3 — learned skip via FrameDiff
@@ -330,15 +293,6 @@ def run_learned_skip(
         state.last_frame_bgr = frame_bgr
         state.last_gray      = current_gray
         state.last_boxes     = boxes
-        _annotate_and_save(
-            frame_bgr, boxes, is_fresh=True,
-            label_lines=[
-                f"Learned Skip Skip Rate: {skips}/{frame_idx+1} ({skips/(frame_idx+1)*100:.1f}%)",
-                f"Avg latency: {latency.mean:.2f} ms, Avg IoU: {IoU.mean:.3f}",
-                f"This frame: {t_ms:.2f} ms, IoU: {cur_iou:.3f}",
-            ],
-            save_path=os.path.join(LEARNED_SKIP_FRAMES, f"learned_skip_{frame_idx:05d}.jpg"),
-        )
         return boxes, latency.mean
 
     # Build framediff input (uses cached last_gray — no redundant cvtColor)
@@ -350,6 +304,8 @@ def run_learned_skip(
 
     x = np.stack([mag_norm, diff_norm], axis=0)
     x_t = torch.from_numpy(np.ascontiguousarray(x)).float().to(device).unsqueeze(0)
+
+
     _sync()
     t0 = time.perf_counter()
     skip_pred = framediff(x_t).item()
@@ -362,16 +318,6 @@ def run_learned_skip(
         cur_iou = match_detections(state.last_boxes, gt_boxes)[2]  # IoU of last boxes vs GT.
         IoU.update(cur_iou)
         latency.update(fd_ms)
-        _annotate_and_save(
-            frame_bgr, state.last_boxes, is_fresh=False,
-            label_lines=[
-                f"Learned Skip Skip Rate: {skips}/{frame_idx+1} ({skips/(frame_idx+1)*100:.1f}%)",
-                f"Avg latency: {latency.mean:.2f} ms, Avg IoU: {IoU.mean:.3f}",
-                f"This frame: {fd_ms:.2f} ms, IoU: {cur_iou:.3f} (skip decision only)"
-            ],
-            save_path=os.path.join(LEARNED_SKIP_FRAMES,
-                                   f"learned_skip_{frame_idx:05d}.jpg"),
-        )
         return state.last_boxes, latency.mean
 
     # Not skipped: run full YOLO (timing restarts to include full pipeline).
@@ -386,21 +332,14 @@ def run_learned_skip(
     state.last_frame_bgr = frame_bgr
     state.last_gray      = current_gray
     state.last_boxes     = boxes
-    _annotate_and_save(
-        frame_bgr, boxes, is_fresh=True,
-        label_lines=[
-            f"Learned Skip Skip Rate: {skips}/{frame_idx+1} ({skips/(frame_idx+1)*100:.1f}%)",
-            f"Avg latency: {latency.mean:.2f} ms, Avg IoU: {IoU.mean:.3f}",
-            f"This frame: {total_ms:.2f} ms, IoU: {cur_iou:.3f}",
-        ],
-        save_path=os.path.join(LEARNED_SKIP_FRAMES,
-                               f"learned_skip_{frame_idx:05d}.jpg"),
-    )
     return boxes, latency.mean
 
 # Main loop
-all_frame_paths = load_video_frames(DEMO_VIDEO_NAME)
-print(f"Loaded {len(all_frame_paths)} frames for video '{DEMO_VIDEO_NAME}'")
+df = pd.read_parquet(PARQUET_FILE)
+test_df = df[df['split'] == 'test']
+videos_test = test_df['video_name'].unique()
+
+all_frame_paths = {video: load_video_frames(video) for video in videos_test}
 
 full_latencies  = RunningMean(warmup=3)
 skipk_latencies = RunningMean(warmup=3)
@@ -411,56 +350,26 @@ learn_iou = RunningIoU(warmup=3)
 
 skipk_state = SkipKState()
 learn_state = LearnedSkipState()
+video_count = 0
+# For each frame run all three strategies and collect latency + IoU stats, then print a report every 5 videos.
+for frame_paths in all_frame_paths.values():
+    for frame_idx, frame_path in enumerate(frame_paths):
+        frame = cv2.imread(frame_path)
+        if frame is None:
+            print(f"Warning: could not read {frame_path}")
+            continue
 
-for frame_idx, frame_path in enumerate(all_frame_paths):
-    frame = cv2.imread(frame_path)
-    if frame is None:
-        print(f"Warning: could not read {frame_path}")
-        continue
+        run_full_yolo(frame, frame_idx, full_latencies)
+        run_skip_k(frame, frame_idx, skipk_latencies, skipk_iou, skipk_state)
+        run_learned_skip(frame, frame_idx, learn_latencies, learn_iou, learn_state)
+    video_count += 1
+    if video_count % 5 == 0:
+        print(f"Processed {video_count} videos...")
+        print(f"  Full YOLO avg latency: {full_latencies.mean:.2f} ms")
+        print(f"  Skip-K avg latency: {skipk_latencies.mean:.2f} ms, avg IoU: {skipk_iou.mean:.3f}")
+        print(f"  Learned skip avg latency: {learn_latencies.mean:.2f} ms, avg IoU: {learn_iou.mean:.3f}")
 
-    run_full_yolo(frame, frame_idx, full_latencies)
-    run_skip_k(frame, frame_idx, skipk_latencies, skipk_iou, skipk_state)
-    run_learned_skip(frame, frame_idx, learn_latencies, learn_iou, learn_state)
-
-# Compile videos
-output_dirs = {
-    FULL_COMPUTE_FRAMES:  ("full",          full_latencies),
-    SKIP_K_FRAMES:        ("skipk",         skipk_latencies),
-    LEARNED_SKIP_FRAMES:  ("learned_skip",  learn_latencies),
-}
-
-for folder, (prefix, lat) in output_dirs.items():
-    # Sort by the numeric frame index embedded in the filename.
-    jpg_files = sorted(
-        glob.glob(os.path.join(folder, "*.jpg")),
-        key=lambda p: int(os.path.splitext(os.path.basename(p))[0].rsplit("_", 1)[-1]),
-    )
-    if not jpg_files:
-        print(f"No frames in {folder}, skipping.")
-        continue
-
-    out_path = os.path.join(VIDEO_OUTPUT, f"{prefix}_output.mp4")
-
-    # Write a sorted file list for ffmpeg to avoid shell-glob ordering issues.
-    list_file = os.path.join(folder, "_filelist.txt")
-    with open(list_file, "w") as fh:
-        for p in jpg_files:
-            fh.write(f"file '{os.path.abspath(p)}'\n")
-
-    subprocess.run(
-        [
-            "ffmpeg", "-y",
-            "-f", "concat", "-safe", "0",
-            "-i", list_file,
-            "-framerate", "30",
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            out_path,
-        ],
-        check=True,
-    )
-    os.remove(list_file)
-    print(
-        f"Saved {len(jpg_files)} frames → {out_path}  "
-        f"(avg latency: {lat.mean:.2f} ms)"
-    )
+# Print final report
+print(f"  Full YOLO avg latency: {full_latencies.mean:.2f} ms")
+print(f"  Skip-K avg latency: {skipk_latencies.mean:.2f} ms, avg IoU: {skipk_iou.mean:.3f}")
+print(f"  Learned skip avg latency: {learn_latencies.mean:.2f} ms, avg IoU: {learn_iou.mean:.3f}")

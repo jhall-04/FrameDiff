@@ -88,11 +88,12 @@ class PairDataset(Dataset):
         return len(self.df)
 
 
-    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         row = self.df.iloc[idx]
         video = str(row["video_name"])
         fa = int(row["frame_num_a"])
         fb = int(row["frame_num_b"])
+        k = int(row["offset"])
         label = float(row["label"])
 
         pa = frame_path(self.frames_folder, video, fa)
@@ -123,8 +124,9 @@ class PairDataset(Dataset):
 
         x = np.stack([mag_norm, diff_norm], axis=0)
         x_t = torch.from_numpy(np.ascontiguousarray(x)).float()
+        k_t = torch.tensor(k, dtype=torch.long)
         y_t = torch.tensor(label, dtype=torch.float32)
-        return x_t, y_t
+        return x_t, k_t, y_t
 
 
 def make_dataloaders(config_path: str | Path = "configs/stage4_config.yaml",

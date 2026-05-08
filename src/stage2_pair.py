@@ -61,11 +61,13 @@ def compute_iou(box_a, box_b):
     bx2 = box_b[0] + box_b[2] / 2.0
     by2 = box_b[1] + box_b[3] / 2.0
 
+    # Determine the coordinates of the intersection rectangle
     xA = max(ax1, bx1)
     yA = max(ay1, by1)
     xB = min(ax2, bx2)
     yB = min(ay2, by2)
 
+    # Compute the area of intersection rectangle
     inter_w = max(0.0, xB - xA)
     inter_h = max(0.0, yB - yA)
     inter_area = inter_w * inter_h
@@ -93,6 +95,7 @@ def match_detections(detections_a, detections_b, iou_threshold=0.5, min_iou=1e-6
     real = matched_ious > min_iou
     matched_ious = matched_ious[real]
 
+    # Metrics:
     n_matched = int(real.sum())
     n_matched_well = int((matched_ious >= iou_threshold).sum())
     mean_iou = float(matched_ious.mean()) if n_matched > 0 else 0.0
@@ -100,6 +103,7 @@ def match_detections(detections_a, detections_b, iou_threshold=0.5, min_iou=1e-6
 
     return n_matched, n_matched_well, mean_iou, match_quality
 
+# Group detections by video and sort by frame number
 def group_detections_by_video(detections_dir: Path):
     """Walk detections_dir and return {video_name: [(frame_num, path), ...]} sorted by frame_num."""
     groups = defaultdict(list)
@@ -121,6 +125,7 @@ def group_detections_by_video(detections_dir: Path):
         print(f"[warn] skipped {skipped} files that didn't match the naming pattern")
     return groups
 
+# Get numpy array of detections from YOLO .txt file
 def parse_detections(detection_path: Path):
     """Parse a YOLO .txt file and return a 2D ndarray of detections. 
     Always returns a 2D array (shape (n, 6))"""
@@ -132,6 +137,8 @@ def parse_detections(detection_path: Path):
         detections = detections.reshape(1, -1)
     return detections
 
+
+# Build pairs of frames based on variable offsets and compute matching metrics
 def build_pairs(detections_by_video, future_offsets, checkpoint_interval=10000):
     columns = ["video_name", "frame_num_a", "frame_num_b", "offset", "num_detections_a", "num_detections_b", "n_matched", "n_matched_well", "mean_iou", "match_quality"]
     detection_df = pd.DataFrame(columns=columns)
@@ -205,10 +212,13 @@ def main():
         args.out_dir.mkdir(parents=True, exist_ok=True)
     PARQUET_CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Step 1: Group detections by video and sort by frame number
     detections_by_video = group_detections_by_video(args.detections_dir)
     print(f"Found {len(detections_by_video)} videos, {sum(len(v) for v in detections_by_video.values())} detections total")
+    # Step 2: Build pairs of frames based on variable offsets and compute matching metrics
     pairs_df = build_pairs(detections_by_video, FUTURE_OFFSETS)
     pairs_path = args.out_dir / "detection_pairs.parquet"
+    # Step 3: Save the pairs manifest to a parquet file
     pairs_df.to_parquet(pairs_path)
     print(f"Saved pairs manifest to {pairs_path}")
 

@@ -8,10 +8,15 @@ train_loader, val_loader, test_loader = make_dataloaders("configs/stage_6_config
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = FrameDiffModel().to(device)
 
+# Loss, optimizer, scheduler
+# Logits allow for more stable training
 criterion = torch.nn.BCEWithLogitsLoss()
+# Adam is a good default optimizer that adapts learning rates for each parameter, often leading to faster convergence
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+# StepLR reduces the learning rate by a factor of 0.1 every 5 epochs, which can help the model converge to a better minimum as training progresses
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
 
+# Training loop
 def train_epoch(model, loader, criterion, optimizer):
     model.train()
     train_loss = 0.0
@@ -25,6 +30,7 @@ def train_epoch(model, loader, criterion, optimizer):
         train_loss += loss.item() * x_batch.size(0)
     return train_loss / len(loader.dataset)
 
+# Evaluation loop
 def evaluate(model, loader, criterion):
     model.eval()
     val_loss, correct = 0.0, 0
@@ -41,6 +47,7 @@ def evaluate(model, loader, criterion):
 best_val_loss = float('inf')
 
 print("Starting training...")
+# Train for 15 epochs, evaluating on the validation set after each epoch. Save the best model based on validation loss.
 for epoch in range(15):
     print(f"Epoch {epoch+1}/15")
     print("Training...")
@@ -55,7 +62,7 @@ for epoch in range(15):
     
     scheduler.step()
 
-
+# Load the best model and evaluate on the test set
 model.load_state_dict(torch.load("best_framediff_model.pt"))
 model.eval()
 with torch.no_grad():
