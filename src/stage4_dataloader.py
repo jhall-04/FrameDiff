@@ -8,7 +8,7 @@ Reads rows from the labeled parquet (Stage 3), loads two frames, builds a 2-chan
 No mkdir / folder creation here — we only read frames and parquet paths you already have.
 
 For downsample=False you get full-res tensors (slow, big memory). For downsample=True (default)
-images are resized before flow + diff so the CNN sees e.g. 256x256.
+images are resized before flow + diff so the CNN sees e.g. 128x128.
 """
 
 from __future__ import annotations
@@ -109,7 +109,7 @@ class PairDataset(Dataset):
         if img_a is None or img_b is None:
             raise RuntimeError(f"cv2 failed to read images: {pa} / {pb}")
 
-        # optional resize (cheap features — 256 is enough for the CNN)
+        # optional resize (cheap features — 128 is enough for the CNN)
         if self.downsample:
             w, h = self.target_hw[1], self.target_hw[0]
             img_a = cv2.resize(img_a, (w, h), interpolation=cv2.INTER_AREA)

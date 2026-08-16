@@ -31,15 +31,6 @@ PARQUET_FILE         = demo_config["data"]["parquet_file"]
 
 VEHICLE_CLASSES = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
 
-# Directory helpers
-def _reset_dir(path: str) -> None:
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.makedirs(path)
-
-for _d in (SKIP_K_FRAMES, LEARNED_SKIP_FRAMES, FULL_COMPUTE_FRAMES, VIDEO_OUTPUT):
-    _reset_dir(_d)
-
 sys.path.append(SRC_PATH)
 from stage5_model import FrameDiffModel
 
